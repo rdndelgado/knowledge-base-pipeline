@@ -1,0 +1,8 @@
+venv/
+venv
+.env
+__pycache__*
+*.json
+workflow.txt
+playground.ipynb
+todo.txt
