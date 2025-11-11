@@ -1,8 +1,9 @@
 from typing import List, Dict, Any
 from pinecone import Pinecone
-from core.config import Config, Logger
+from utils.logger import Logger
 import requests
 import uuid
+import os
 
 class PineconeService:
     """Service to interact with Pinecone index for document chunks."""
@@ -10,8 +11,8 @@ class PineconeService:
     def __init__(self):
         self.logger = Logger
 
-        self.api_key = Config.PINECONE_API_KEY
-        self.index_name = Config.PINECONE_INDEX_NAME
+        self.api_key = os.getenv("PINECONE_API_KEY", "")
+        self.index_name = os.getenv("PINECONE_INDEX_NAME", "")
 
         if not self.api_key:
             raise ValueError("Missing PINECONE_API_KEY environment variable.")

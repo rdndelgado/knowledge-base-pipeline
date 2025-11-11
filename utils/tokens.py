@@ -1,7 +1,7 @@
 import tiktoken
-from core.config import Config
+import os
 
-encoding = tiktoken.encoding_for_model(Config.OPENAI_MODEL)
+encoding = tiktoken.encoding_for_model(os.getenv("OPENAI_MODEL", ""))
 
 def count_tokens(text: str) -> int:
     """Return number of tokens in a string."""

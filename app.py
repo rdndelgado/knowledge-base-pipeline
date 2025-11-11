@@ -3,16 +3,14 @@ from services.document_service import DocumentService
 from services.supabase_service import SupabaseService
 from services.embedding_service import EmbeddingService
 from services.pinecone_service import PineconeService
-from core.config import Logger
-import os
+from services.cleanup_service import CleanupService
+from utils.logger import Logger
 
 class App:
     def __init__(self):
         
         self.logger = Logger
         self.google_drive_service = GoogleDriveService(
-            credentials_json=os.getenv("CREDENTIALS_SERVICE_ACCOUNT_JSON", None),
-            folder_id=os.getenv("GOOGLE_DRIVE_FOLDER_ID", None),
             download_dir="documents"
         )
         self.document_service = DocumentService()
@@ -21,14 +19,18 @@ class App:
         self.pinecone_service = PineconeService()
 
         self.requested_files = [
-            "Collaborative feedback for better learning - Huddle Up Learning.docx",
-            "content.docx"
+            "Test"
         ]
 
+        self.files_to_delete = []
+
     def run(self):
+        self.cleanup() # delete specific records from supabase and pinecone
+    
+    def sync(self):
         # Pull documents, mapped their IDs in the DB, update and chunk them
-        # filenames = self.google_drive_service.fetch_files(all=False, titles=self.requested_files) # Specific documents
-        filenames = self.google_drive_service.fetch_files(all=True) # All doc files in gdrive folder
+        filenames = self.google_drive_service.fetch_files(all=False, titles=self.requested_files) # Specific documents
+        # filenames = self.google_drive_service.fetch_files(all=True) # All doc files in gdrive folder
 
         if not filenames:
             self.logger.warning('No files downloaded. Skipping process.')
@@ -43,6 +45,14 @@ class App:
         embedded_chunks = self.embedding_service.generate_embeddings(synced_chunks)
         total_upserted = self.pinecone_service.sync(embedded_chunks)
         self.logger.info(f"Sync Complete. {total_upserted} chunks updated.")
+
+    def cleanup(self):
+        cleanup = CleanupService(
+            supabase_client=self.supabase_service.client,
+            pinecone_index=self.pinecone_service.index,
+            requested_files=self.requested_files
+        )
+        cleanup.run()
 
 if __name__ == "__main__":
     app = App()

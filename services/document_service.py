@@ -2,13 +2,14 @@ import os
 import pandas as pd
 from datetime import datetime
 from docx import Document
-from core.config import Logger
+from utils.logger import Logger
 from services.supabase_service import SupabaseService
 from utils.tokens import count_tokens
 from typing import List, Dict, Tuple
 from nltk.tokenize import sent_tokenize
 
 class DocumentService:
+    
     def __init__(self, docs_dir="documents", error_log_path="logs/errors.csv"):
         self.docs_dir = docs_dir
         self.error_log_path = error_log_path

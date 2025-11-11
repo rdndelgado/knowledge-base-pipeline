@@ -1,13 +1,14 @@
-from core.config import Logger, Config
+from utils.logger import Logger
 from openai import OpenAI
 from typing import List, Dict, Any
 from collections import defaultdict
+import os
 
 class EmbeddingService:
     def __init__(self):
         self.logger = Logger
-        self.embedding_model = Config.EMBEDDING_MODEL
-        self.api_key = Config.OPENAI_API_KEY
+        self.embedding_model = os.getenv("EMBEDDING_MODEL", "")
+        self.api_key = os.getenv("OPENAI_API_KEY", "")
 
         self.client = OpenAI(api_key=self.api_key)
 

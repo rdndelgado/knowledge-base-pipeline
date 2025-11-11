@@ -1,6 +1,6 @@
 import os
 from supabase import create_client, Client
-from core.config import Logger
+from utils.logger import Logger
 from typing import List, Dict
 
 class SupabaseService:

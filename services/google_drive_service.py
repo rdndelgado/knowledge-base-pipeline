@@ -3,7 +3,7 @@ import io
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from google_auth_oauthlib.flow import InstalledAppFlow
-from core.config import Logger
+from utils.logger import Logger
 from typing import List
 
 from google.oauth2 import service_account
@@ -13,10 +13,10 @@ import os
 class GoogleDriveService:
     SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
-    def __init__(self, credentials_json=None, folder_id=None, download_dir="documents"):
+    def __init__(self, download_dir="documents"):
         self.logger = Logger
-        self.credentials_json = credentials_json or os.getenv("CREDENTIALS_JSON_FILE")
-        self.folder_id = folder_id or os.getenv("GOOGLE_DRIVE_FOLDER_ID")
+        self.credentials_json = os.getenv("CREDENTIALS_JSON_FILE")
+        self.folder_id = os.getenv("GOOGLE_DRIVE_FOLDER_ID")
         self.download_dir = download_dir
         self.drive = None
 
