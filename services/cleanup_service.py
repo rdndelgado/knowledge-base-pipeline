@@ -49,6 +49,7 @@ class CleanupService:
         """Run cleanup in modular order — Supabase first, then Pinecone."""
         document_ids = self.get_document_ids()
         if not document_ids:
+            self.logger.warning("No documents to delete.")
             return
         self.delete_documents_in_supabase(document_ids)
         self.delete_chunks_in_pinecone(document_ids)

@@ -22,8 +22,6 @@ class App:
             "Test"
         ]
 
-        self.files_to_delete = []
-
     def run(self):
         self.cleanup() # delete specific records from supabase and pinecone
     
