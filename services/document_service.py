@@ -70,17 +70,17 @@ class DocumentService:
                 if not content.strip():
                     self.logger.warning(f"[Document Service] Empty content for: {title}")
                     continue
-
+                
                 if not document:
                     self.logger.warning(f"[Document Service] Document not found in the database: {title}")
                     payload = {
                         "title": title,
                         "content": content
                     }
+                    # if document is new, insert one.
                     data = self.supabase_service._upsert_document(payload)
                     if data:
                         mapped_documents.append(data)
-                        print('Inserted: ', data)
                     continue
 
                 # Update the content in the document

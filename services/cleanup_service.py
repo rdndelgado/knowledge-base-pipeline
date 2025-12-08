@@ -1,5 +1,6 @@
 from typing import List
 from utils.logger import Logger
+import os
 
 class CleanupService:
     def __init__(self, supabase_client, pinecone_index, requested_files: List[str]):
@@ -10,21 +11,27 @@ class CleanupService:
 
     def get_document_ids(self) -> List[str]:
         """Fetch existing document IDs from Supabase for the given filenames."""
+        all_ids = []
         try:
-            response = (
-                self.supabase.table("documents")
-                .select("id, title")
-                .in_("title", self.requested_files)
-                .execute()
-            )
-            if not response.data:
-                self.logger.warning("[Cleanup] No matching documents found.")
-                return []
-            ids = [doc["id"] for doc in response.data]
-            self.logger.info(f"[Cleanup] Found {len(ids)} document(s) to delete.")
-            return ids
+            for file in self.requested_files:
+                title = os.path.splitext(file)[0]
+                response = (
+                    self.supabase.table("documents")
+                    .select("id, title")
+                    .eq("title", title)  # exact match by title
+                    .execute()
+                )
+                if not response.data:
+                    self.logger.warning(f"[Cleanup] No matching documents found for '{title}'.")
+                    continue  # skip to next file
+
+                ids = [doc["id"] for doc in response.data]
+                all_ids.extend(ids)
+                self.logger.info(f"[Cleanup] Found {len(ids)} document(s) for '{title}'.")
+
+            return all_ids
         except Exception as e:
-            self.logger.error(f"[Cleanup] Failed to fetch documents: {e}")
+            self.logger.error(f"[Cleanup] Error fetching document IDs: {e}")
             return []
 
     def delete_documents_in_supabase(self, document_ids: List[str]) -> None:

@@ -5,6 +5,7 @@ from services.embedding_service import EmbeddingService
 from services.pinecone_service import PineconeService
 from services.cleanup_service import CleanupService
 from utils.logger import Logger
+from dotenv import load_dotenv
 
 class App:
     def __init__(self):
@@ -18,18 +19,29 @@ class App:
         self.embedding_service = EmbeddingService()
         self.pinecone_service = PineconeService()
 
-        self.requested_files = [
-            "Test"
-        ]
+        self.requested_files = []
 
     def run(self):
-        self.cleanup() # delete specific records from supabase and pinecone
-    
-    def sync(self):
-        # Pull documents, mapped their IDs in the DB, update and chunk them
-        filenames = self.google_drive_service.fetch_files(all=False, titles=self.requested_files) # Specific documents
-        # filenames = self.google_drive_service.fetch_files(all=True) # All doc files in gdrive folder
+        try:
+            # ----------------ONLY CHOOSE ONE OPERATION----------------
 
+            # --------------------------------CLEANUP----------------------------------------
+            # Set all to True to remove all records stored in the DB and Pinecone that is in the Google Drive folder
+            # self.requested_files = self.google_drive_service.fetch_files(all=True)
+            # self.cleanup()
+
+            # --------------------------------SYNC----------------------------------------
+            # Sync
+            self.sync(all=True)  # Sync all -> change to False to sync only specific files you set in the self.requested_files list
+        except Exception as e:
+            self.logger.exception(f"App run failed: {e}")
+
+    def sync(self, all=False):
+        # Pull documents, mapped their IDs in the DB, update and chunk them
+        if not all:
+            filenames = self.google_drive_service.fetch_files(titles=self.requested_files)
+        else:
+            filenames = self.google_drive_service.fetch_files(all=all)
         if not filenames:
             self.logger.warning('No files downloaded. Skipping process.')
             return
@@ -53,5 +65,6 @@ class App:
         cleanup.run()
 
 if __name__ == "__main__":
+    load_dotenv()
     app = App()
     app.run()

@@ -7,3 +7,6 @@ workflow.txt
 playground.ipynb
 todo.txt
 pinecone_retrieval_test.py
+*.doc*
+*.csv*
+*.xlsx*

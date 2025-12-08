@@ -34,7 +34,7 @@ class GoogleDriveService:
             scopes=self.SCOPES
         )
         self.drive = build("drive", "v3", credentials=creds)
-        self.logger.success("✅ Authenticated using service account.")
+        self.logger.success("✅ Google Drive authenticated using service account.")
 
     # List all files in the google drive folder
     def list_drive_folder_doc_files(self):
@@ -106,8 +106,6 @@ class GoogleDriveService:
                     done = False
                     while not done:
                         status, done = downloader.next_chunk()
-                        if status:
-                            self.logger.info(f"Downloading {file_name}: {int(status.progress() * 100)}%")
 
                 downloaded_count += 1
                 downloaded_files.append(safe_name)
@@ -128,7 +126,7 @@ class GoogleDriveService:
 
 
     # Fetch files from Google Drive
-    def fetch_files(self, all=True, titles=None) -> List[str]:
+    def fetch_files(self, all=False, titles=None) -> List[str]:
         """Authenticate and fetch files — all or filtered by name. Returns list of downloaded filenames."""
         self.authenticate()
         files = self.list_drive_folder_doc_files()

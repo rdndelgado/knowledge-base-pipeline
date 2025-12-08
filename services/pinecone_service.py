@@ -150,3 +150,23 @@ class PineconeService:
         except Exception as e:
             self.logger.error(f"[Pinecone] Error fetching chunks for {document_id}: {e}")
             return {}
+
+    def clear_index(self, namespace: str = "__default__") -> bool:
+        """
+        Clear all vectors from the Pinecone index.
+
+        Parameters:
+            namespace: Namespace to clear (default: "__default__").
+
+        Returns:
+            True if the index was cleared successfully, False otherwise.
+        """
+        try:
+            try:
+                self.index.delete(delete_all=True, namespace=namespace)
+            except TypeError:
+                self.index.delete(deleteAll=True, namespace=namespace)
+            self.logger.success(f"[Pinecone] Cleared index '{self.index_name}' namespace '{namespace}'.")
+            return True
+        except Exception as e:
+            self.logger.warning(f"[Pinecone] Failed to clear index: {e}")
