@@ -2,19 +2,21 @@ import os
 import pandas as pd
 from datetime import datetime
 from docx import Document
-from utils.logger import Logger
-from services.supabase_service import SupabaseService
+from utils.logger import logger
+# from services.supabase_service import SupabaseService
+from services.mysql_service import MySQLService
 from utils.tokens import count_tokens
 from typing import List, Dict, Tuple
 from nltk.tokenize import sent_tokenize
+from models.database import KBDocument, KBDocumentChunk
 
 class DocumentService:
     
-    def __init__(self, docs_dir="documents", error_log_path="logs/errors.csv"):
+    def __init__(self, docs_dir="documents", error_log_path="logs/errors.csv", mysql_service=None):
         self.docs_dir = docs_dir
         self.error_log_path = error_log_path
-        self.logger = Logger
-        self.supabase_service = SupabaseService()
+        self.mysql_service = mysql_service
+        # self.supabase_service = SupabaseService()
         os.makedirs(os.path.dirname(error_log_path), exist_ok=True)
 
         # Chunking parameters
@@ -53,7 +55,7 @@ class DocumentService:
         files_to_process = [f for f in all_files if not documents or f in documents]
 
         if not files_to_process:
-            self.logger.warning("[Document Service] No documents to process.")
+            logger.warning("No documents to process.")
             return []
 
         for filename in files_to_process:
@@ -61,37 +63,75 @@ class DocumentService:
             title = os.path.splitext(filename)[0]
             file_path = os.path.join(self.docs_dir, filename)
 
+            # Read .docx content
+            content = self._read_docx(file_path)
+            if not content.strip():
+                logger.warning(f"Empty content for: {title}")
+                continue
+
             try:
                 # Fetch existing document from the database
-                document = self.supabase_service.get_document_by_title(title)
+                document = self.mysql_service.get_document_by_title(title)
 
                 # Read .docx content
                 content = self._read_docx(file_path)
                 if not content.strip():
-                    self.logger.warning(f"[Document Service] Empty content for: {title}")
+                    logger.warning(f"Empty content for: {title}")
                     continue
                 
                 if not document:
-                    self.logger.warning(f"[Document Service] Document not found in the database: {title}")
-                    payload = {
-                        "title": title,
-                        "content": content
-                    }
+                    logger.warning(f"Document not found in the database: {title}")
+                    payload = KBDocument(
+                        title=title,
+                        content=content
+                    )
+
                     # if document is new, insert one.
-                    data = self.supabase_service._upsert_document(payload)
+                    data = self.mysql_service.insert_document(payload)
                     if data:
+                        logger.info(f"Inserted new document: {title}")
                         mapped_documents.append(data)
-                    continue
+                    else:
+                        logger.warning(f"Failed to insert new document: {title}")
+                    continue # Proceed or Skip to next document
 
                 # Update the content in the document
                 document["content"] = content
                 mapped_documents.append(document)
             except Exception as e:
                 self._log_error(title, str(e))
-                self.logger.error(f"[Document Service] Error while mapping document {title}: {e}")
+                logger.error(f"Error while mapping document {title}.")
+                raise
         
-        self.logger.info(f"[Document Service] Mapped {len(mapped_documents)}/{total_docs} documents.")
+        logger.info(f"Mapped {len(mapped_documents)}/{total_docs} documents.")
         return mapped_documents
+    
+    def _generate_chunks(self, documents: List[Dict]) -> List[Dict]:
+        """
+        Generate chunks for each document based on chunk size.
+        Returns a flat list of chunks with document_id included.
+        """
+        all_chunks = []
+
+        for _, doc in enumerate(documents):
+            doc_id = doc["id"]
+            content = str(doc["content"])
+            title = doc.get("title")
+
+            chunks = self._chunk_text(content)
+            for idx, chunk in enumerate(chunks):
+                token_count = count_tokens(chunk)
+                all_chunks.append({
+                    "document_id": doc_id,
+                    "chunk_index": idx,
+                    "content": chunk,
+                    "token_count": token_count
+                })
+            
+            logger.info(f"Generated {len(chunks)} chunks for document: {title}")
+        
+        logger.info(f"Total generated {len(all_chunks)} chunks across all documents")
+        return all_chunks
 
     def _chunk_text(self, text: str):
         """
@@ -129,29 +169,6 @@ class DocumentService:
             chunks.append(" ".join(current_chunk))
 
         return chunks
-
-    def _generate_chunks(self, documents: List[Dict]):
-        """Generate chunks for each document based on chunk size."""
-        chunked_documents = []
-
-        for _, doc in enumerate(documents):
-            doc_id = doc["id"]
-            content = str(doc["content"])
-            title = doc.get("title", "Untitled")
-
-            document_chunks = []
-
-            chunks = self._chunk_text(content)
-            for idx, chunk in enumerate(chunks):
-                token_count = count_tokens(chunk)
-                document_chunks.append({
-                    "chunk_index": idx,
-                    "content": chunk,
-                    "token_count": token_count
-                })
-            chunked_documents.append({"document_id": doc_id, "chunks": document_chunks})
-            self.logger.info(f"Generated {len(document_chunks)} chunks for document: {title}")
-        return chunked_documents
     
     def _read_docx(self, file_path):
         """Read .docx file and return plain text."""
@@ -159,7 +176,7 @@ class DocumentService:
             doc = Document(file_path)
             return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
         except Exception as e:
-            self.logger.error(f"Failed to read {file_path}.")
+            logger.error(f"Failed to read {file_path}.")
             self._log_error(file_path, str(e))
             raise
 
@@ -180,5 +197,5 @@ class DocumentService:
             else:
                 df.to_csv(self.error_log_path, index=False)
         except Exception as e:
-            self.logger.error(f"[Document Service] Failed to write to error log: {e}")
+            logger.error(f"Failed to write to error log: {e}")
             raise

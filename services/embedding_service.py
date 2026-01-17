@@ -1,4 +1,4 @@
-from utils.logger import Logger
+from utils.logger import logger
 from openai import OpenAI
 from typing import List, Dict, Any
 from collections import defaultdict
@@ -6,7 +6,6 @@ import os
 
 class EmbeddingService:
     def __init__(self):
-        self.logger = Logger
         self.embedding_model = os.getenv("EMBEDDING_MODEL", "")
         self.api_key = os.getenv("OPENAI_API_KEY", "")
 
@@ -22,18 +21,18 @@ class EmbeddingService:
         grouped_embeddings = defaultdict(list)
 
         for chunk in document_chunks:
-            doc_id = str(chunk.get("document_id", "unknown"))
+            doc_id = str(chunk.get("document_id"))
             try:
                 response = self.client.embeddings.create(
                     model=self.embedding_model,
                     input=chunk["content"]
                 )
                 embedding = response.data[0].embedding
-                chunk['embedding'] = embedding or None
+                chunk['embedding'] = embedding
                 grouped_embeddings[doc_id].append(chunk)
             except Exception as e:
-                self.logger.error(f"[Embeddings] Failed to generate embedding for [doc: {doc_id} | chunk: {chunk.get('id')}]: {e}")
+                logger.error(f"[Embeddings] Failed to generate embedding for [doc: {doc_id} | chunk: {chunk.get('id')}]: {e}")
                 continue
 
-        self.logger.success(f"[Embeddings] Generated embeddings for {len(grouped_embeddings)} documents.")
+        logger.info(f"[Embeddings] Generated embeddings for {len(grouped_embeddings)} documents.")
         return dict(grouped_embeddings)

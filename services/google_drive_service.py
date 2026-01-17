@@ -2,8 +2,7 @@ import os
 import io
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
-from google_auth_oauthlib.flow import InstalledAppFlow
-from utils.logger import Logger
+from utils.logger import logger
 from typing import List
 
 from google.oauth2 import service_account
@@ -14,7 +13,6 @@ class GoogleDriveService:
     SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
     def __init__(self, download_dir="documents"):
-        self.logger = Logger
         self.credentials_json = os.getenv("CREDENTIALS_JSON_FILE")
         self.folder_id = os.getenv("GOOGLE_DRIVE_FOLDER_ID")
         self.download_dir = download_dir
@@ -34,7 +32,7 @@ class GoogleDriveService:
             scopes=self.SCOPES
         )
         self.drive = build("drive", "v3", credentials=creds)
-        self.logger.success("✅ Google Drive authenticated using service account.")
+        logger.info("✅ Google Drive authenticated using service account.")
 
     # List all files in the google drive folder
     def list_drive_folder_doc_files(self):
@@ -62,7 +60,7 @@ class GoogleDriveService:
         if all:
             return files
         if not titles:
-            self.logger.warning("No file titles provided; skipping download.")
+            logger.warning("No file titles provided; skipping download.")
             return []
         return [f for f in files if f["name"] in titles]
 
@@ -73,7 +71,7 @@ class GoogleDriveService:
             raise RuntimeError("Drive client not initialized. Call authenticate() first.")
 
         if not files:
-            self.logger.warning("No matching files to download.")
+            logger.warning("No matching files to download.")
             return []
 
         os.makedirs(self.download_dir, exist_ok=True)
@@ -109,18 +107,18 @@ class GoogleDriveService:
 
                 downloaded_count += 1
                 downloaded_files.append(safe_name)
-                self.logger.success(f"Downloaded: {safe_name}")
+                logger.info(f"Downloaded: {safe_name}")
 
             except Exception as e:
-                self.logger.error(f"Error downloading {file_name}: {e}")
+                logger.error(f"Error downloading {file_name}: {e}")
                 continue
 
         # --- Summary logging ---
         if all_files:
-            self.logger.info(f"Total downloaded: {downloaded_count}")
+            logger.info(f"Total downloaded: {downloaded_count}")
         else:
             total_requested = len(requested_titles) if requested_titles else 0
-            self.logger.success(f"Total downloaded: {downloaded_count}/{total_requested}")
+            logger.info(f"Total downloaded: {downloaded_count}/{total_requested}")
 
         return downloaded_files
 

@@ -1,13 +1,13 @@
 from typing import List
-from utils.logger import Logger
+from utils.logger import logger
 import os
 
 class CleanupService:
+    
     def __init__(self, supabase_client, pinecone_index, requested_files: List[str]):
         self.supabase = supabase_client
         self.index = pinecone_index
         self.requested_files = requested_files
-        self.logger = Logger
 
     def get_document_ids(self) -> List[str]:
         """Fetch existing document IDs from Supabase for the given filenames."""
@@ -22,16 +22,16 @@ class CleanupService:
                     .execute()
                 )
                 if not response.data:
-                    self.logger.warning(f"[Cleanup] No matching documents found for '{title}'.")
+                    logger.warning(f"[Cleanup] No matching documents found for '{title}'.")
                     continue  # skip to next file
 
                 ids = [doc["id"] for doc in response.data]
                 all_ids.extend(ids)
-                self.logger.info(f"[Cleanup] Found {len(ids)} document(s) for '{title}'.")
+                logger.info(f"[Cleanup] Found {len(ids)} document(s) for '{title}'.")
 
             return all_ids
         except Exception as e:
-            self.logger.error(f"[Cleanup] Error fetching document IDs: {e}")
+            logger.error(f"[Cleanup] Error fetching document IDs: {e}")
             return []
 
     def delete_documents_in_supabase(self, document_ids: List[str]) -> None:
@@ -39,25 +39,25 @@ class CleanupService:
         for doc_id in document_ids:
             try:
                 self.supabase.table("documents").delete().eq("id", doc_id).execute()
-                self.logger.success(f"[Cleanup] Deleted document {doc_id} from Supabase.")
+                logger.info(f"[Cleanup] Deleted document {doc_id} from Supabase.")
             except Exception as e:
-                self.logger.error(f"[Cleanup] Failed to delete document {doc_id}: {e}")
+                logger.error(f"[Cleanup] Failed to delete document {doc_id}: {e}")
 
     def delete_chunks_in_pinecone(self, document_ids: List[str]) -> None:
         """Delete all Pinecone chunks with matching document_id metadata."""
         for doc_id in document_ids:
             try:
                 self.index.delete(filter={"document_id": {"$eq": doc_id}})
-                self.logger.success(f"[Cleanup] Deleted Pinecone chunks for document {doc_id}.")
+                logger.info(f"[Cleanup] Deleted Pinecone chunks for document {doc_id}.")
             except Exception as e:
-                self.logger.error(f"[Cleanup] Failed to delete Pinecone chunks for {doc_id}: {e}")
+                logger.error(f"[Cleanup] Failed to delete Pinecone chunks for {doc_id}: {e}")
 
     def run(self):
         """Run cleanup in modular order — Supabase first, then Pinecone."""
         document_ids = self.get_document_ids()
         if not document_ids:
-            self.logger.warning("No documents to delete.")
+            logger.warning("No documents to delete.")
             return
         self.delete_documents_in_supabase(document_ids)
         self.delete_chunks_in_pinecone(document_ids)
-        self.logger.info("[Cleanup] Document removal completed.")
+        logger.info("[Cleanup] Document removal completed.")

@@ -1,6 +1,6 @@
 import os
 from supabase import create_client, Client
-from utils.logger import Logger
+from utils.logger import logger
 from typing import List, Dict
 
 class SupabaseService:
@@ -9,9 +9,8 @@ class SupabaseService:
 
         self.url = os.getenv("SUPABASE_URL")
         self.key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-        self.logger = Logger
         self.client: Client = create_client(self.url, self.key)
-        self.logger.success("Supabase initialized successfully.")
+        logger.info("Supabase initialized successfully.")
 
         self.max_retries = 3
 
@@ -51,11 +50,11 @@ class SupabaseService:
                 )
 
                 if response.data and response.data[0]:
-                    self.logger.success(f"[Supabase] Upserted document: {document['title']}")
+                    logger.info(f"[Supabase] Upserted document: {document['title']}")
                     return response.data[0]
 
             except Exception as e:
-                self.logger.error(f"[Supabase] Retrying {attempt + 1}/{self.max_retries} - Error upserting document '{document['title']}': {e}")
+                logger.error(f"[Supabase] Retrying {attempt + 1}/{self.max_retries} - Error upserting document '{document['title']}': {e}")
                 continue
     
     def sync_document_chunks(self, document_chunks: List[Dict]) -> List[Dict]:
@@ -73,7 +72,7 @@ class SupabaseService:
             existing_count = len(existing_chunks)
             new_count = len(new_chunks)
 
-            self.logger.info(f"[Supabase] Syncing document ID {doc_id}: {existing_count} → {new_count} chunks")
+            logger.info(f"[Supabase] Syncing document ID {doc_id}: {existing_count} → {new_count} chunks")
 
             # Map old IDs to new chunks where possible
             for i in range(min(existing_count, new_count)):
@@ -85,9 +84,9 @@ class SupabaseService:
                 if extra_ids:
                     try:
                         self.client.table("document_chunks").delete().in_("id", extra_ids).execute()
-                        self.logger.warning(f"Deleted {len(extra_ids)} outdated chunks for document ID: {doc_id}")
+                        logger.warning(f"Deleted {len(extra_ids)} outdated chunks for document ID: {doc_id}")
                     except Exception as e:
-                        self.logger.error(f"Failed to delete old chunks for {doc_id}: {e}")
+                        logger.error(f"Failed to delete old chunks for {doc_id}: {e}")
 
             # Upsert all new/updated chunks
             doc_chunks = self._upsert_document_chunks(doc)
@@ -125,10 +124,10 @@ class SupabaseService:
 
                 if response.data and response.data[0]:
                     doc_chunks.append(response.data[0])
-                    self.logger.info(f"[Supabase] Upserted chunk {chunk['chunk_index']}.")
+                    logger.info(f"[Supabase] Upserted chunk {chunk['chunk_index']}.")
 
             except Exception as e:
-                self.logger.warning(
+                logger.warning(
                     f"[Supabase] Failed to upsert chunk {chunk.get('chunk_index')} → {e}"
                 )
                 continue
@@ -153,7 +152,7 @@ class SupabaseService:
             else:
                 return None
         except Exception as e:
-            self.logger.error(f"[Supabase] Error querying document '{filename}': {e}")
+            logger.error(f"[Supabase] Error querying document '{filename}': {e}")
             return None
 
     def _fetch_document_chunks(self, document_id: int):
@@ -171,5 +170,5 @@ class SupabaseService:
                 )
                 return response.data if response.data else []
             except Exception as e:
-                self.logger.error(f"(Retrying {attempt}/{self.max_retries}) Error fetching chunks for document ID {document_id}: {e}")
+                logger.error(f"(Retrying {attempt}/{self.max_retries}) Error fetching chunks for document ID {document_id}: {e}")
                 continue
