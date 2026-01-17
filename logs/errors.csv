@@ -1,7 +1,0 @@
-2025-12-22T01:56:23.907588,engagement-reports-xxx-v11.13,"2 validation errors for KBDocument
-id
-  Field required [type=missing, input_value={'title': 'engagement-rep...n feedback usefulness.'}, input_type=dict]
-    For further information visit https://errors.pydantic.dev/2.11/v/missing
-title
-  Input should be a valid UUID, invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `n` at 2 [type=uuid_parsing, input_value='engagement-reports-xxx-v11.13', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.11/v/uuid_parsing"

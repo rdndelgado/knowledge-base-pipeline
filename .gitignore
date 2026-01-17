@@ -10,4 +10,5 @@ pinecone_retrieval_test.py
 *.doc*
 *.csv
 *.xlsx*
-logs/
+logs/*
+documents/*

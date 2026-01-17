@@ -3,12 +3,18 @@ import pandas as pd
 from datetime import datetime
 from docx import Document
 from utils.logger import logger
-# from services.supabase_service import SupabaseService
-from services.mysql_service import MySQLService
 from utils.tokens import count_tokens
 from typing import List, Dict, Tuple
+import nltk
 from nltk.tokenize import sent_tokenize
-from models.database import KBDocument, KBDocumentChunk
+from models.database import KBDocument
+
+# Download NLTK data if not already present
+try:
+    nltk.data.find('tokenizers/punkt_tab')
+except LookupError:
+    logger.info("Downloading NLTK punkt_tab tokenizer...")
+    nltk.download('punkt_tab', quiet=True)
 
 class DocumentService:
     
@@ -16,7 +22,6 @@ class DocumentService:
         self.docs_dir = docs_dir
         self.error_log_path = error_log_path
         self.mysql_service = mysql_service
-        # self.supabase_service = SupabaseService()
         os.makedirs(os.path.dirname(error_log_path), exist_ok=True)
 
         # Chunking parameters

@@ -5,7 +5,7 @@ from pymysql.cursors import DictCursor
 from pymysql.err import OperationalError, InterfaceError
 from utils.logger import logger
 from models.database import KBDocument, KBDocumentChunk
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 import uuid
 
 class MySQLService:
@@ -123,6 +123,70 @@ class MySQLService:
         query = f"SELECT * FROM {self.chunk_table} WHERE document_id = %s ORDER BY chunk_index ASC"
         results = self.execute_query(query, (document_id,), fetch=True)
         return results
+    
+    def get_document_ids_by_titles(self, titles: list) -> list:
+        """Fetch document IDs for a list of titles."""
+        if not titles:
+            return []
+        
+        conn = self.pool.connection()
+        try:
+            with conn.cursor() as cursor:
+                # Create placeholders for IN clause
+                placeholders = ','.join(['%s'] * len(titles))
+                query = f"SELECT id, title FROM {self.document_table} WHERE title IN ({placeholders})"
+                cursor.execute(query, titles)
+                results = cursor.fetchall()
+                return [doc["id"] for doc in results]
+        except Exception as e:
+            logger.error(f"[MySQL] Error fetching document IDs by titles: {e}")
+            raise
+        finally:
+            conn.close()
+    
+    def delete_documents_by_ids(self, document_ids: list) -> None:
+        """Delete documents by their IDs. Chunks will be deleted automatically due to CASCADE."""
+        if not document_ids:
+            return
+        
+        conn = self.pool.connection()
+        try:
+            conn.begin()
+            with conn.cursor() as cursor:
+                placeholders = ','.join(['%s'] * len(document_ids))
+                query = f"DELETE FROM {self.document_table} WHERE id IN ({placeholders})"
+                cursor.execute(query, document_ids)
+                deleted_count = cursor.rowcount
+            conn.commit()
+            logger.info(f"[MySQL] Deleted {deleted_count} document(s) from {self.document_table}")
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"[MySQL] Failed to delete documents: {e}")
+            raise
+        finally:
+            conn.close()
+    
+    def delete_chunks_by_document_ids(self, document_ids: list) -> None:
+        """Delete chunks by document IDs."""
+        if not document_ids:
+            return
+        
+        conn = self.pool.connection()
+        try:
+            conn.begin()
+            with conn.cursor() as cursor:
+                placeholders = ','.join(['%s'] * len(document_ids))
+                query = f"DELETE FROM {self.chunk_table} WHERE document_id IN ({placeholders})"
+                cursor.execute(query, document_ids)
+                deleted_count = cursor.rowcount
+            conn.commit()
+            logger.info(f"[MySQL] Deleted {deleted_count} chunk(s) from {self.chunk_table}")
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"[MySQL] Failed to delete chunks: {e}")
+            raise
+        finally:
+            conn.close()
     
     def insert_document(self, document: KBDocument) -> Optional[Dict]:
         """
