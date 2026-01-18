@@ -19,7 +19,8 @@ class App:
         self.pinecone_service = PineconeService()
 
         self.requested_files = [
-            "roi-reference"
+            "plans-and-pricing",
+            "features"
         ]
 
     def run(self):
@@ -31,36 +32,54 @@ class App:
             # self.cleanup() # will remove records in SQL DB and Pinecone specified in the self.requested_files
 
             # --------------------------------SYNC----------------------------------------
-            self.sync(all=False)  # Update documents in SQL database and Pinecone from Google Drive Folder -> change to False to sync only specific files you set in the self.requested_files list
+            self.sync(all=True)  # Update documents in SQL database and Pinecone from Google Drive Folder -> change to False to sync only specific files you set in the self.requested_files list
         except Exception as e:
             logger.exception(f"App run failed: {e}")
 
     def sync(self, all=False):
-        # Pull documents, mapped their IDs in the DB, update and chunk them
-        if not all:
-            filenames = self.google_drive_service.fetch_files(titles=self.requested_files)
-        else:
-            filenames = self.google_drive_service.fetch_files(all=all)
+        """Sync documents from Google Drive to MySQL and Pinecone, then clear local files."""
+        try:
+            # Pull documents, mapped their IDs in the DB, update and chunk them
+            if not all:
+                filenames = self.google_drive_service.fetch_files(titles=self.requested_files)
+            else:
+                filenames = self.google_drive_service.fetch_files(all=all)
 
-        if not filenames:
-            logger.warning('No files downloaded. Skipping process.')
-            return
-        
-        mapped_docs, chunked_docs = self.document_service.process(documents=filenames)
-        inserted_chunks = self.mysql_service.bulk_insert_chunks(chunked_docs)
+            if not filenames:
+                logger.warning('No files downloaded. Skipping process.')
+                return
+            
+            mapped_docs, chunked_docs = self.document_service.process(documents=filenames)
+            inserted_chunks = self.mysql_service.bulk_insert_chunks(chunked_docs)
 
-        # # Generate embeddings
-        embedded_chunks = self.embedding_service.generate_embeddings(inserted_chunks)
-        total_upserted = self.pinecone_service.sync(embedded_chunks)
-        logger.info(f"Sync Complete.")
+            # Generate embeddings
+            embedded_chunks = self.embedding_service.generate_embeddings(inserted_chunks)
+            total_upserted = self.pinecone_service.sync(embedded_chunks)
+            logger.info(f"Sync Complete.")
+        finally:
+            # Always clear the documents directory at the end to prevent mixing prod/dev documents
+            try:
+                self.google_drive_service.clear_download_dir()
+            except Exception as e:
+                logger.error(f"Failed to clear download directory: {e}")
+                # Don't raise - we want sync to complete even if cleanup fails
 
     def cleanup(self):
-        cleanup = CleanupService(
-            mysql_service=self.mysql_service,
-            pinecone_index=self.pinecone_service.index,
-            requested_files=self.requested_files
-        )
-        cleanup.run()
+        """Clean up documents from MySQL and Pinecone, then clear local files."""
+        try:
+            cleanup = CleanupService(
+                mysql_service=self.mysql_service,
+                pinecone_index=self.pinecone_service.index,
+                requested_files=self.requested_files
+            )
+            cleanup.run()
+        finally:
+            # Always clear the documents directory at the end to prevent mixing prod/dev documents
+            try:
+                self.google_drive_service.clear_download_dir()
+            except Exception as e:
+                logger.error(f"Failed to clear download directory: {e}")
+                # Don't raise - we want cleanup to complete even if file cleanup fails
 
 if __name__ == "__main__":
     load_dotenv()

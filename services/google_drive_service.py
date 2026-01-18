@@ -131,3 +131,33 @@ class GoogleDriveService:
         selected_files = self.filter_files(files, titles=titles, all=all)
         downloaded_files = self.download_files(selected_files, requested_titles=titles, all_files=all)
         return downloaded_files
+    
+    def clear_download_dir(self):
+        """Clear all files from the download directory to prevent mixing documents from different sources."""
+        try:
+            if not os.path.exists(self.download_dir):
+                logger.info(f"[GoogleDrive] Download directory '{self.download_dir}' does not exist. Nothing to clear.")
+                return
+            
+            # List all files in the directory
+            files = os.listdir(self.download_dir)
+            if not files:
+                logger.info(f"[GoogleDrive] Download directory '{self.download_dir}' is already empty.")
+                return
+            
+            # Remove all files
+            removed_count = 0
+            for filename in files:
+                file_path = os.path.join(self.download_dir, filename)
+                try:
+                    if os.path.isfile(file_path):
+                        os.remove(file_path)
+                        removed_count += 1
+                        logger.debug(f"[GoogleDrive] Removed file: {filename}")
+                except Exception as e:
+                    logger.error(f"[GoogleDrive] Failed to remove file '{filename}': {e}")
+            
+            logger.info(f"[GoogleDrive] Cleared {removed_count} file(s) from '{self.download_dir}' directory.")
+        except Exception as e:
+            logger.error(f"[GoogleDrive] Error clearing download directory: {e}")
+            raise
