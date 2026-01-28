@@ -1,6 +1,7 @@
 from pinecone import Pinecone
 from utils.logger import logger
 import os
+from dotenv import load_dotenv
 
 class PineconeService:
     """Service to interact with Pinecone index for document chunks."""
@@ -52,6 +53,8 @@ class PineconeService:
             return False
 
 if __name__ == "__main__":
+
+    load_dotenv()
     
     pinecone_service = PineconeService()
     success = pinecone_service.clear_index(namespace="__default__")

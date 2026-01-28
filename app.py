@@ -19,8 +19,7 @@ class App:
         self.pinecone_service = PineconeService()
 
         self.requested_files = [
-            "plans-and-pricing",
-            "features"
+            "dev-introduction"
         ]
 
     def run(self):
