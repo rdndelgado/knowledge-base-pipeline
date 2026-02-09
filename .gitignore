@@ -8,7 +8,7 @@ playground.ipynb
 todo.txt
 pinecone_retrieval_test.py
 *.doc*
-*.csv
+*.csv*
 *.xlsx*
-logs/*
-documents/*
+logs/
+documents/

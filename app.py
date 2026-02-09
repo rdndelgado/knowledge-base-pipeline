@@ -4,7 +4,6 @@ from services.mysql_service import MySQLService
 from services.embedding_service import EmbeddingService
 from services.pinecone_service import PineconeService
 from services.cleanup_service import CleanupService
-from models.database import KBDocumentChunk
 from utils.logger import logger
 from dotenv import load_dotenv
 
