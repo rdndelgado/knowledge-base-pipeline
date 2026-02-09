@@ -67,6 +67,7 @@ PINECONE_INDEX_NAME=your_index_name
 
 # OpenAI
 OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4o-mini
 EMBEDDING_MODEL=text-embedding-3-small
 ```
 
