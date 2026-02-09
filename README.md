@@ -32,19 +32,32 @@ git clone https://github.com/rdndelgado/knowledge-base-pipeline.git
 cd knowledge-base-pipeline
 ```
 
-### 2. Install dependencies
+### 2. Create and activate virtual environment
+
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Linux/Mac:
+source venv/bin/activate
+# On Windows:
+# venv\Scripts\activate
+```
+
+### 3. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Download NLTK data
+### 4. Download NLTK data
 
 ```bash
 python -m nltk.downloader punkt_tab
 ```
 
-### 4. Configure environment variables
+### 5. Configure environment variables
 
 Create a `.env` file in the root directory with the following variables:
 
@@ -71,7 +84,7 @@ OPENAI_MODEL=gpt-4o-mini
 EMBEDDING_MODEL=text-embedding-3-small
 ```
 
-### 5. Set up Google Drive service account
+### 6. Set up Google Drive service account
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a service account and download the JSON credentials file
